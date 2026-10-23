@@ -1,0 +1,355 @@
+/* Disputes CSS — detail panel sebagai popup modal */
+.dispute-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.dispute-list-panel {
+  min-width: 0;
+  padding: 16px;
+}
+
+.dispute-list-panel .section-heading {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dispute-list-panel .table-frame {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.dispute-list-panel .table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.dispute-list-panel .claims-table {
+  width: 100%;
+  min-width: 420px;
+  table-layout: fixed;
+}
+
+.dispute-list-panel .claims-table th:nth-child(1) { width: 22%; }
+.dispute-list-panel .claims-table th:nth-child(2) { width: 18%; }
+.dispute-list-panel .claims-table th:nth-child(3) { width: 20%; }
+.dispute-list-panel .claims-table th:nth-child(4) { width: 27%; }
+.dispute-list-panel .claims-table th:nth-child(5) { width: 13%; }
+
+.dispute-list-panel .section-heading select {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.dispute-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dispute-create-modal {
+  width: min(560px, 100%);
+}
+
+.dispute-create-form {
+  display: grid;
+  gap: 12px;
+}
+
+.dispute-create-form > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.chatbot-dispute-trigger {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin: 0 16px 6px;
+}
+
+/* ── Dispute Detail Popup Overlay ─────────────────────── */
+.dispute-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.dispute-detail-overlay.hidden {
+  display: none;
+}
+
+.dispute-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  cursor: pointer;
+}
+
+.dispute-detail-panel {
+  position: relative;
+  z-index: 1;
+  width: min(860px, 100%);
+  max-height: 90vh;
+  overflow: hidden;            /* Panel TIDAK scroll — hanya body yang scroll */
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  background: var(--card-bg);
+  animation: disputeDetailIn 0.22s ease;
+}
+
+@keyframes disputeDetailIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dispute-detail-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+  z-index: 2;
+  border-radius: 14px 14px 0 0;
+}
+
+.dispute-detail-modal-header .eyebrow {
+  margin: 0 0 2px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.dispute-detail-modal-header h2 {
+  margin: 0 0 3px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dispute-detail-modal-header p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.dispute-detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dispute-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 20px 24px;
+}
+
+
+/* ── Form fields inside detail ────────────────────────── */
+.dispute-detail-body .form-field {
+  display: block;
+  margin: 12px 0 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dispute-letter-editor,
+.dispute-review-box textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font: 12px/1.65 "Plus Jakarta Sans", sans-serif;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.dispute-letter-editor[readonly] {
+  opacity: 0.9;
+}
+
+.dispute-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dispute-actions input {
+  flex: 1 1 170px;
+  min-width: 150px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+/* ── Sent form (Admin BPJS kirim sanggahan) ── */
+.dispute-sent-form {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-main);
+}
+
+.dispute-sent-form.hidden { display: none; }
+
+.dispute-sent-label {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.dispute-sent-fields {
+  display: grid;
+  gap: 4px;
+}
+
+.dispute-sent-fields input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font: 13px "Plus Jakarta Sans", sans-serif;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.dispute-sent-fields input:focus {
+  outline: none;
+  border-color: var(--accent-primary, #4f8ef7);
+  box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.12);
+}
+
+.dispute-review-box {
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-main);
+}
+
+.dispute-review-box textarea {
+  min-height: 84px;
+}
+
+.dispute-history {
+  margin-top: 22px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+.dispute-citations {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--bg-main);
+}
+
+.dispute-citations h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.dispute-citations ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.dispute-citations p {
+  margin: 3px 0 0;
+}
+
+.dispute-history h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.dispute-history ol {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.dispute-history li strong,
+.dispute-history li span {
+  display: block;
+}
+
+.dispute-history li strong {
+  color: var(--text-primary);
+}
+
+.dispute-saved-notice {
+  margin: 12px 0 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 620px) {
+  .dispute-page-actions {
+    width: 100%;
+  }
+
+  .dispute-page-actions .button {
+    flex: 1 1 auto;
+  }
+
+  .dispute-detail-panel {
+    width: 100%;
+    max-height: 95vh;
+    border-radius: 14px 14px 0 0;
+    align-self: flex-end;
+  }
+
+  .dispute-detail-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+}

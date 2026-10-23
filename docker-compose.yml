@@ -1,0 +1,11 @@
+services:
+  klaimguard-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/regulation_docs:/app/backend/regulation_docs
+      - ./backend/ml_models:/app/backend/ml_models
+    restart: unless-stopped

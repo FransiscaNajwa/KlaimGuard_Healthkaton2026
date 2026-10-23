@@ -1,0 +1,239 @@
+.table-frame {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  min-height: 200px;
+  overflow: visible;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-soft);
+}
+
+.table-scroll {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-color: var(--border-color) transparent;
+  scrollbar-width: thin;
+}
+
+.claims-table,
+.results-table-new {
+  width: 100%;
+  min-width: 1040px;
+  border-collapse: collapse;
+  table-layout: auto;
+  text-align: left;
+}
+
+.claims-table th,
+.claims-table td,
+.results-table-new th,
+.results-table-new td {
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.claims-table thead th,
+.results-table-new thead th {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  height: 44px;
+  background-color: var(--table-header-bg);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.claims-table tbody td,
+.results-table-new tbody td {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.claims-table tbody tr:last-child td,
+.results-table-new tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.claims-table tbody tr:hover td,
+.results-table-new tbody tr:hover td {
+  background: var(--surface-muted);
+}
+
+.claim-primary,
+.claim-secondary,
+.cost-cell {
+  display: block;
+}
+
+.status-cell { text-align: center; }
+
+.claim-primary {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.claim-secondary {
+  margin-top: 4px;
+  color: #64748B;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.code-cell {
+  min-width: 180px;
+  max-width: 290px;
+}
+
+.chip-code {
+  display: inline-block;
+  max-width: 100%;
+  margin: 2px;
+  padding: 2px 8px;
+  overflow: hidden;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  background: var(--code-chip-valid);
+  color: var(--code-chip-valid-text);
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.chip-code-violation {
+  border-color: #ef9a9a;
+  background: var(--code-chip-invalid);
+  color: var(--code-chip-invalid-text);
+  cursor: help;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-badge-safe {
+  background: var(--code-chip-valid);
+  color: var(--code-chip-valid-text);
+}
+
+.status-badge-upcoding {
+  background: var(--code-chip-invalid);
+  color: var(--code-chip-invalid-text);
+}
+
+.status-badge-unbundling {
+  background: var(--accent-amber-soft);
+  color: var(--accent-amber);
+}
+
+.status-badge-review {
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue);
+}
+
+.cost-requested {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cost-requested.is-fraud {
+  color: var(--badge-upcoding);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.cost-approved {
+  display: block;
+  margin-top: 3px;
+  color: var(--badge-safe);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.saving-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.action-column {
+  text-align: right;
+}
+
+.action-cell {
+  text-align: right;
+}
+
+.number-cell { text-align: center; color: var(--text-secondary) !important; font-weight: 700; }
+.claim-notes { display: -webkit-box; max-width: 300px; overflow: hidden; color: var(--claim-note-color); font-size: 0.85rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.detail-button { min-height: 30px; padding: 0 9px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-primary); font-size: 9px; font-weight: 700; white-space: nowrap; }
+.detail-button:hover { border-color: var(--bpjs-primary); color: var(--bpjs-primary); }
+.btn-outline-sm { min-height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 5px; background: transparent; color: var(--text-primary); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.btn-outline-sm:hover { border-color: var(--bpjs-primary); color: var(--bpjs-primary); }
+
+.status-badge { min-height: 28px; padding: 5px 12px; font-size: 0.78rem; font-weight: 700; }
+
+.review-button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.review-button:hover {
+  border-color: var(--bpjs-primary);
+  color: var(--bpjs-primary);
+}
+
+.table-message {
+  height: 140px;
+  color: var(--text-secondary) !important;
+  text-align: center;
+}
+
+.table-message.is-error {
+  color: var(--badge-upcoding) !important;
+}
+
+@media (max-width: 900px) {
+  .claims-table { min-width: 1040px; }
+}
+
+@media (max-width: 640px) {
+  .claims-table { min-width: 1040px; }
+}

@@ -1,0 +1,106 @@
+.button,
+.icon-button,
+.send-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.button {
+  min-height: 36px;
+  gap: 8px;
+  padding: 0 13px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.button:active,
+.icon-button:active,
+.send-button:active {
+  transform: translateY(1px);
+}
+
+.button-primary {
+  background: var(--bpjs-primary);
+  color: #fff;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--bpjs-primary-hover);
+}
+
+.button-primary:disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.button-quiet {
+  border-color: var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.button-quiet:hover {
+  border-color: var(--bpjs-primary);
+  color: var(--bpjs-primary);
+}
+
+.button-icon {
+  font-size: 15px;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-color: var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.icon-button:hover {
+  border-color: var(--bpjs-primary);
+  color: var(--bpjs-primary);
+}
+
+.theme-toggle {
+  font-size: 18px;
+}
+
+.is-loading .button-icon {
+  animation: spin 900ms linear infinite;
+}
+
+.is-loading .button-icon::before {
+  content: "◌";
+}
+
+.is-loading .button-icon {
+  font-size: 0;
+}
+
+.is-loading .button-icon::before {
+  font-size: 16px;
+}
+
+.send-button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  background: var(--bpjs-primary);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.send-button:hover {
+  background: var(--bpjs-primary-hover);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

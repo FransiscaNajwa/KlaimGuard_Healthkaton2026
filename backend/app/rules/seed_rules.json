@@ -1,0 +1,167 @@
+[
+  {
+    "rule_code": "RULE-UPC-001",
+    "category": "UPCODING",
+    "legal_source": "Panduan Manual Verifikasi Klaim INA-CBG Edisi 2 Kasus No. 3",
+    "regulation_ref": "Permenkes No. 76 Tahun 2016 Bab III Kaidah Koding ICD-10",
+    "primary_code": "A01.0",
+    "conflicting_code": "A09",
+    "violation_type": "KODE_KOMBINASI",
+    "clinical_narrative": "Diare dan gastroenteritis pada demam tifoid merupakan gejala klinis perjalanan penyakit, bukan komplikasi mandiri.",
+    "recommendation": "Gunakan kode kombinasi tunggal A01.0 (Salmonella enteritis). Hapus kode A09 dari diagnosis sekunder."
+  },
+  {
+    "rule_code": "RULE-UPC-002",
+    "category": "UPCODING",
+    "legal_source": "Panduan Manual Verifikasi Klaim INA-CBG Edisi 2 Kasus No. 19",
+    "regulation_ref": "ICD-10 Volume 1 Bab IV Excludes Note",
+    "primary_code": "E11.9",
+    "conflicting_code": "R02",
+    "violation_type": "KODE_KOMBINASI",
+    "clinical_narrative": "Kode R02 (Gangrene NEC) memiliki catatan Exclude terhadap Diabetes Mellitus. Gangrene diabetik harus dikode kombinasi.",
+    "recommendation": "Ganti diagnosis menjadi kode tunggal E11.5 (Type 2 DM with peripheral circulatory complications)."
+  },
+  {
+    "rule_code": "RULE-UPC-003",
+    "category": "UPCODING",
+    "legal_source": "Panduan Manual Verifikasi Klaim INA-CBG Edisi 2 Kasus Medis No. 1",
+    "regulation_ref": "Permenkes No. 36 Tahun 2015 Pasal 5 Ayat 4",
+    "primary_code": "I25.9",
+    "conflicting_code": "R57.0",
+    "violation_type": "EXCLUDE_NOTE",
+    "clinical_narrative": "Diagnosa sekunder Syok Kardiogenik (R57.0) ditambahkan tanpa adanya bukti klinis hemodinamik tidak stabil (TD < 90 mmHg) dan terapi inotropik.",
+    "recommendation": "Hapus R57.0 karena tidak didukung tatalaksana medis aktif dalam resume rekam medis."
+  },
+  {
+    "rule_code": "RULE-UPC-004",
+    "category": "UPCODING",
+    "legal_source": "Panduan Manual Verifikasi Klaim INA-CBG Edisi 2 Kasus No. 7 & Edisi 1 Kasus No. 52",
+    "regulation_ref": "ICD-10 Volume 1 Sub Bab Hypertensive Renal Disease",
+    "primary_code": "I10",
+    "conflicting_code": "N17",
+    "violation_type": "KODE_KOMBINASI",
+    "clinical_narrative": "Kode I12 hanya untuk gagal ginjal kronis (CKD N18/N19) akibat hipertensi, tidak boleh digunakan untuk gagal ginjal akut (ARF N17).",
+    "recommendation": "Koding terpisah sebagai Hipertensi Primer (I10) dan Acute Renal Failure (N17.9)."
+  },
+  {
+    "rule_code": "RULE-UPC-005",
+    "category": "UPCODING",
+    "legal_source": "Permenkes No. 76 Tahun 2016 Bab III",
+    "regulation_ref": "Kaidah Koding Morbiditas ICD-10",
+    "primary_code": "K29.1",
+    "conflicting_code": "K92.1",
+    "violation_type": "KODE_KOMBINASI",
+    "clinical_narrative": "Gastritis akut disertai perdarahan melena tidak boleh ditagihkan dua kode terpisah.",
+    "recommendation": "Gunakan kode kombinasi tunggal K29.0 (Acute haemorrhagic gastritis)."
+  },
+  {
+    "rule_code": "RULE-UPC-006",
+    "category": "UPCODING",
+    "legal_source": "Permenkes No. 36 Tahun 2015 Pasal 5 Ayat 4",
+    "regulation_ref": "Pedoman Koding Morbiditas INA-CBGs",
+    "primary_code": "J06.9",
+    "conflicting_code": "J20.9",
+    "violation_type": "EXCLUDE_NOTE",
+    "clinical_narrative": "Catatan dokter hanya mendeskripsikan ISPA/batuk pilek ringan 3 hari tanpa tanda ronkhi atau infeksi saluran napas bawah, namun diklaim Bronkitis Akut.",
+    "recommendation": "Koreksi kode diagnosis utama menjadi J06.9 (ISPA Ringan)."
+  },
+  {
+    "rule_code": "RULE-UPC-007",
+    "category": "UPCODING",
+    "legal_source": "Permenkes No. 36 Tahun 2015 Pasal 5 Ayat 4",
+    "regulation_ref": "Pedoman Penilaian Prosedur Klaim INA-CBGs",
+    "primary_code": "H10.9",
+    "conflicting_code": "13.41",
+    "violation_type": "EXCLUDE_NOTE",
+    "clinical_narrative": "Pasien konjungtivitis dan mata merah ringan tanpa laporan operasi katarak ditagihkan prosedur Fakoemulsifikasi (13.41).",
+    "recommendation": "Batalkan klaim prosedur 13.41, klaimkan rawat jalan tingkat pertama/spesialis mata non-bedah."
+  },
+  {
+    "rule_code": "RULE-UPC-008",
+    "category": "UPCODING",
+    "legal_source": "Panduan Manual Verifikasi Klaim INA-CBG Edisi 2",
+    "regulation_ref": "ICD-10 Volume 1 Bab III Penyakit Darah",
+    "primary_code": "D64.9",
+    "conflicting_code": "D61.9",
+    "violation_type": "EXCLUDE_NOTE",
+    "clinical_narrative": "Anemia defisiensi umum tanpa bukti biopsi sumsum tulang diklaim sebagai Anemia Aplastik Berat untuk menaikkan Severity Level.",
+    "recommendation": "Koreksi diagnosis sekunder menjadi Anemia Unspecified (D64.9)."
+  },
+  {
+    "rule_code": "RULE-UNB-001",
+    "category": "UNBUNDLING",
+    "legal_source": "Buku Panduan Koding ICD-10 & 9-CM Urologi 2019",
+    "regulation_ref": "Permenkes No. 36 Tahun 2015 Pasal 5 Ayat 8",
+    "primary_code": "60.29",
+    "conflicting_code": "57.32",
+    "violation_type": "PROSEDUR_INKLUSIF",
+    "clinical_narrative": "Sistoskopi eksploratif sebelum tindakan reseksi prostat transuretra (TURP) merupakan prosedur inklusif tahap awal operasi.",
+    "recommendation": "Hapus kode 57.32. Seluruh pembiayaan telah tercakup dalam paket prosedur TURP 60.29."
+  },
+  {
+    "rule_code": "RULE-UNB-002",
+    "category": "UNBUNDLING",
+    "legal_source": "Permenkes No. 76 Tahun 2016 Bab III",
+    "regulation_ref": "Pedoman Teknis Pembayaran INA-CBGs",
+    "primary_code": "74.1",
+    "conflicting_code": "03.90",
+    "violation_type": "PROSEDUR_INKLUSIF",
+    "clinical_narrative": "Tindakan pembiusan/anestesi spinal sudah termasuk ke dalam komponen paket tindakan pembedahan sectio caesarea.",
+    "recommendation": "Hapus kode 03.90. Tagihkan hanya kode prosedur bedah utama 74.1."
+  },
+  {
+    "rule_code": "RULE-UNB-003",
+    "category": "UNBUNDLING",
+    "legal_source": "Panduan Manual Verifikasi Klaim INA-CBG Edisi 1",
+    "regulation_ref": "Permenkes No. 76 Tahun 2016 Aturan Pelayanan Hemodialisa",
+    "primary_code": "39.95",
+    "conflicting_code": "99.21",
+    "violation_type": "PROSEDUR_INKLUSIF",
+    "clinical_narrative": "Injeksi obat dan kanulasi pembuluh darah pada sesi hemodialisa rutin adalah satu kesatuan paket cuci darah.",
+    "recommendation": "Hapus kode 99.21. Klaimkan paket tunggal Hemodialisa (39.95)."
+  },
+  {
+    "rule_code": "RULE-UNB-004",
+    "category": "UNBUNDLING",
+    "legal_source": "Permenkes No. 76 Tahun 2016 Bab III",
+    "regulation_ref": "ICD-9-CM Volume 3 Kaidah Koding Prosedur",
+    "primary_code": "51.23",
+    "conflicting_code": "88.76",
+    "violation_type": "PROSEDUR_INKLUSIF",
+    "clinical_narrative": "Pemeriksaan USG atau kolangiografi intraoperatif pada bedah laparoskopi empedu adalah prosedur terpadu operasi.",
+    "recommendation": "Klaimkan hanya prosedur utama Laparoscopic Cholecystectomy (51.23)."
+  },
+  {
+    "rule_code": "RULE-UNB-005",
+    "category": "UNBUNDLING",
+    "legal_source": "Permenkes No. 76 Tahun 2016 Bab III Prosedur Inklusif",
+    "regulation_ref": "Permenkes No. 36 Tahun 2015 Pasal 5 Ayat 8",
+    "primary_code": "47.09",
+    "conflicting_code": "54.11",
+    "violation_type": "PROSEDUR_INKLUSIF",
+    "clinical_narrative": "Insisi dan laparotomi eksplorasi untuk mencapai apendiks merupakan akses bedah yang tidak boleh ditagihkan mandiri.",
+    "recommendation": "Hapus kode 54.11. Tagihkan hanya prosedur Apendektomi (47.09)."
+  },
+  {
+    "rule_code": "RULE-UNB-006",
+    "category": "UNBUNDLING",
+    "legal_source": "Permenkes No. 76 Tahun 2016 Kaidah Bedah Ortopedi",
+    "regulation_ref": "ICD-9-CM Volume 3",
+    "primary_code": "79.05",
+    "conflicting_code": "93.53",
+    "violation_type": "PROSEDUR_INKLUSIF",
+    "clinical_narrative": "Aplikasi gips atau bidai fiksasi pasca reduksi tertutup fraktur tulang paha sudah termasuk paket reduksi tertutup.",
+    "recommendation": "Hapus kode 93.53. Tagihkan hanya prosedur reduksi 79.05."
+  },
+  {
+    "rule_code": "RULE-UNB-007",
+    "category": "UNBUNDLING",
+    "legal_source": "Panduan Manual Verifikasi Klaim INA-CBG Edisi 2 Kasus No. 206",
+    "regulation_ref": "Permenkes No. 76 Tahun 2016 Ketentuan Khusus Laboratorium PA",
+    "primary_code": "91.99",
+    "conflicting_code": "40.11",
+    "violation_type": "EXCLUDE_NOTE",
+    "clinical_narrative": "Pembacaan ulang sediaan jaringan lama dari faskes perujuk ditagihkan sebagai prosedur operasi biopsi jaringan baru.",
+    "recommendation": "Tindakan pemeriksaan biopsi tidak dikoding ulang (omit code biopsi)."
+  }
+]

@@ -1,0 +1,1 @@
+"""Validated API schemas for the application domain."""
