@@ -23,13 +23,18 @@ from app.interfaces.api_rules import router as rules_router
 from app.interfaces.api_stats import router as stats_router
 from app.interfaces.api_audit import router as audit_router
 from app.interfaces.api_disputes import router as disputes_router
+from app.interfaces.api_rs_portal import router as rs_portal_router
+from app.interfaces.api_facilities import router as facilities_router
 from app.infrastructure.database import Base, engine
 from app.infrastructure import security_models as _security_models
+from app.infrastructure import orm_models as _orm_models
+from scripts.additive_migration import migrate_additive_schema
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    migrate_additive_schema(engine)
     yield
 
 
@@ -42,13 +47,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  
+    allow_credentials=False, 
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -77,6 +77,8 @@ app.include_router(stats_router)
 app.include_router(audit_router)
 app.include_router(copilot_router)
 app.include_router(disputes_router)
+app.include_router(rs_portal_router)
+app.include_router(facilities_router)
 app.mount(
     "/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend"
 )

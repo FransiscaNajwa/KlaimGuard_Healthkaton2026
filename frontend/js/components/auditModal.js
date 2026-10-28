@@ -17,7 +17,7 @@ function renderCodeRows(items) {
 
 function renderDetail(claim) {
   const body = document.getElementById("auditModalBody");
-  const canVerify = document.body.dataset.role === "admin_audit";
+  const canVerify = document.body.dataset.role === "admin_bpjs";
   const rule = claim.rule;
   const risk = Number.isFinite(Number(claim.risk_score)) ? `${(Number(claim.risk_score) * 100).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%` : "Tidak tersedia";
   const codes = claim.code_breakdown?.length
@@ -53,7 +53,7 @@ function renderDetail(claim) {
     </section>
     <section class="feedback-panel"><h3>Keputusan Verifikator</h3>
       ${canVerify ? `<div class="detail-actions"><button class="button button-primary" id="approveClaimButton" type="button" ${claim.manual_only ? "disabled" : ""}>Setujui Klaim</button><button class="button button-quiet" id="overrideClaimButton" type="button" ${claim.manual_only ? "disabled" : ""}>Override Keputusan AI</button></div>
-      <p class="feedback-result" id="feedbackResult" aria-live="polite">${claim.manual_only ? "Analisis manual bersifat sementara; keputusan audit tersedia untuk klaim yang tersimpan." : "Keputusan manusia disimpan pada jejak audit."}</p>` : `<p class="feedback-result">Mode baca saja: keputusan klaim hanya dapat disimpan oleh Admin Audit.</p>`}
+      <p class="feedback-result" id="feedbackResult" aria-live="polite">${claim.manual_only ? "Analisis manual bersifat sementara; keputusan verifikator tersedia untuk klaim yang tersimpan." : "Keputusan verifikator disimpan pada jejak audit."}</p>` : `<p class="feedback-result">Mode baca saja: keputusan klaim hanya dapat disimpan oleh Admin Verifikator.</p>`}
     </section>`;
   if (!canVerify) return;
   document.getElementById("approveClaimButton").addEventListener("click", () => {

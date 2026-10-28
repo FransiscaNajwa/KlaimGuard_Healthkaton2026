@@ -18,7 +18,7 @@ ANONYMIZER = DataAnonymizer()
 def create_feedback(
     feedback_data: FeedbackCreate,
     current_user: dict[str, str] = Depends(
-        require_roles(UserRole.ADMIN_AUDIT)
+        require_roles(UserRole.ADMIN_BPJS)
     ),
     db: Session = Depends(get_db_session),
 ) -> FeedbackResponse:
@@ -99,7 +99,7 @@ def create_feedback(
 def get_claim_feedback(
     claim_id: str,
     _current_user: dict[str, str] = Depends(
-        require_roles(UserRole.ADMIN_BPJS, UserRole.ADMIN_AUDIT)
+        require_roles(UserRole.ADMIN_BPJS)
     ),
     db: Session = Depends(get_db_session),
 ) -> list[FeedbackResponse]:

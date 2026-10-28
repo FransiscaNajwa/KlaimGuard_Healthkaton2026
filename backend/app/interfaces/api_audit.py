@@ -6,13 +6,14 @@ from sqlalchemy.orm import Session
 
 from app.interfaces.dependencies import get_db_session
 from app.infrastructure.security_models import AuditLogEntry
+from app.infrastructure.orm_models import HospitalActivity
 from app.security.rbac import UserRole, require_roles
 
 
 router = APIRouter(
     prefix="/api/v1/audit",
     tags=["Audit Trail"],
-    dependencies=[Depends(require_roles(UserRole.ADMIN_BPJS, UserRole.ADMIN_AUDIT))],
+    dependencies=[Depends(require_roles(UserRole.ADMIN_BPJS))],
 )
 
 
@@ -55,4 +56,28 @@ def list_audit_logs(
         "current_page": page,
         "total_pages": (total + limit - 1) // limit if total else 0,
         "limit": limit,
+    }
+
+
+@router.get("/hospital-activity")
+def list_hospital_activity(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db_session),
+) -> dict[str, object]:
+    total = db.scalar(select(func.count()).select_from(HospitalActivity)) or 0
+    entries = db.scalars(
+        select(HospitalActivity)
+        .order_by(HospitalActivity.created_at.desc(), HospitalActivity.id.desc())
+        .offset((page - 1) * limit).limit(limit)
+    ).all()
+    return {
+        "data": [{
+            "user_id": item.user_id, "facility_code": item.facility_code,
+            "dispute_case_id": item.dispute_case_id, "action": item.action,
+            "response_version": item.response_version, "details": item.details,
+            "created_at": item.created_at,
+        } for item in entries],
+        "total_records": total, "current_page": page,
+        "total_pages": (total + limit - 1) // limit if total else 0,
     }

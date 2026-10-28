@@ -4,18 +4,29 @@ import {
   logout,
   getAnalytics,
   getAuditLogs,
+  getHospitalActivity,
   getClaims,
   getCurrentUser,
   getRules,
   getStats,
   runBatchAudit,
-} from "./api.js?v=enterprise-11";
-import { openModal, closeModal } from "./components/auditModal.js?v=enterprise-10";
+  getRsDashboard,
+  getRsClarifications,
+  getRsClarification,
+  saveRsResponse,
+  uploadRsDocument,
+  submitRsResponse,
+  getRsProfile,
+  getFacilities,
+  searchFacilityClaims,
+  createFacility,
+} from "./api.js?v=enterprise-20";
+import { openModal, closeModal } from "./components/auditModal.js?v=enterprise-11";
 import { renderTable } from "./components/claimTable.js";
 import { escapeHtml, formatDocumentTitle, formatIdr, formatNumber } from "./components/dom.js?v=enterprise-8";
-import { initChatbot, setActiveClaim } from "./components/chatbotWidget.js?v=enterprise-10";
-import { initDisputeWorkflow } from "./components/disputeWorkflow.js?v=enterprise-1";
-import { renderPagination } from "./components/pagination.js";
+import { initChatbot, setActiveClaim } from "./components/chatbotWidget.js?v=enterprise-12";
+import { initDisputeWorkflow } from "./components/disputeWorkflow.js?v=enterprise-25";
+import { renderPagination } from "./components/pagination.js?v=enterprise-2";
 import { renderStats } from "./components/statsCard.js?v=enterprise-8";
 import { initTheme } from "./components/themeManager.js";
 
@@ -43,6 +54,8 @@ let costRiskDistChart;
 let topAnomaliesChart;
 
 let searchTimer;
+let facilityClaimSearchTimer;
+const selectedFacilityClaimIds = new Set();
 
 function showToast(message, isError = false) {
   const region = document.getElementById("toastRegion");
@@ -54,10 +67,12 @@ function showToast(message, isError = false) {
 }
 
 function configureRoleAccess(role) {
-  const canAnalyze = role === "admin_audit";
+  const canAnalyze = role === "admin_bpjs";
   document.querySelector(".manual-form-section").classList.toggle("is-hidden", !canAnalyze);
   document.getElementById("batchNavItem").classList.toggle("is-hidden", !canAnalyze);
   document.getElementById("batchTab").classList.toggle("is-hidden", !canAnalyze);
+  document.getElementById("facilityNavItem").classList.toggle("is-hidden", !canAnalyze);
+  document.getElementById("facilitiesTab").classList.toggle("is-hidden", !canAnalyze);
   const restrictedControls = [
     ...document.querySelectorAll("#manualFormCollapse input, #manualFormCollapse select, #manualFormCollapse button"),
     document.getElementById("toggleManualFormBtn"),
@@ -67,7 +82,7 @@ function configureRoleAccess(role) {
   restrictedControls.forEach((control) => {
     control.disabled = !canAnalyze;
     control.classList.toggle("is-hidden", !canAnalyze);
-    control.title = canAnalyze ? "" : "Hanya Admin Audit yang dapat menjalankan analisis.";
+    control.title = canAnalyze ? "" : "Hanya Verifikator BPJS yang dapat menjalankan analisis.";
   });
 }
 
@@ -76,15 +91,67 @@ function showAuthenticatedApp(user) {
   document.getElementById("loginView").classList.add("is-hidden");
   document.getElementById("appContainer").classList.remove("is-hidden");
   document.getElementById("profileName").textContent = user.user_id;
-  const isAuditAdmin = user.role === "admin_audit";
-  document.getElementById("profileRole").textContent = isAuditAdmin ? "Admin Audit" : "Admin BPJS";
+  const roleLabels = { admin_bpjs: "Admin Verifikator", petugas_klaim_rs: "Petugas Klaim RS" };
+  document.getElementById("profileRole").textContent = roleLabels[user.role] || user.role;
   initTheme();
+  initSidebarToggle(user.role);
+  if (user.role === "petugas_klaim_rs") {
+    const sidebarNav = document.querySelector("#appSidebar .sidebar-nav");
+    sidebarNav.setAttribute("aria-label", "Navigasi portal rumah sakit");
+    sidebarNav.innerHTML = `
+      <button class="nav-item active" type="button" data-rs-tab="rsDashboardView" title="Dashboard" aria-label="Dashboard"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nav-label">Dashboard</span></button>
+      <button class="nav-item" id="openRsProfileButton" type="button" title="Profil Faskes" aria-label="Buka profil faskes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h.01M15 10h.01M9 14h.01M15 14h.01M10 21v-4h4v4"/></svg><span class="nav-label">Profil Faskes</span></button>`;
+    document.querySelectorAll("#rsClarificationModal, #rsProfileModal").forEach((modal) => document.body.append(modal));
+    document.getElementById("openRsProfileButton").addEventListener("click", openRsProfileModal);
+    document.querySelectorAll("[data-close-rs-clarification]").forEach((button) => button.addEventListener("click", closeRsClarificationModal));
+    document.querySelectorAll("[data-close-rs-profile]").forEach((button) => button.addEventListener("click", closeRsProfileModal));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeRsClarificationModal();
+        closeRsProfileModal();
+      }
+    });
+    document.querySelector("#appSidebar .sidebar-footer").innerHTML = '<span class="sidebar-status-dot"></span> PORTAL FASKES';
+    document.getElementById("appSidebar").classList.remove("is-hidden", "collapsed");
+    document.getElementById("sidebarToggleBtn").setAttribute("aria-expanded", "true");
+    document.getElementById("sidebarToggleBtn").setAttribute("aria-label", "Tutup sidebar");
+    document.getElementById("sidebarToggleBtn").title = "Tutup sidebar";
+    document.querySelectorAll("#appSidebar [data-rs-tab]").forEach((item) => item.addEventListener("click", () => {
+      activateRsPortalTab(item.dataset.rsTab);
+      loadRsPortal();
+    }));
+    document.getElementById("refreshRsPortalButton").addEventListener("click", () => loadRsPortal());
+    document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.toggle("hidden", panel.id !== "rsPortalTab"));
+    loadRsPortal();
+    return;
+  }
   initChatbot();
   initDisputeWorkflow(user.role, showToast);
   bindFilters();
   configureRoleAccess(user.role);
   activateTab("dashboard");
   loadDashboardData();
+}
+
+function initSidebarToggle(role) {
+  const button = document.getElementById("sidebarToggleBtn");
+  const sidebar = document.getElementById("appSidebar");
+  button.addEventListener("click", () => {
+    const collapsed = sidebar.classList.toggle("collapsed");
+    button.setAttribute("aria-expanded", String(!collapsed));
+    button.setAttribute("aria-label", collapsed ? "Buka sidebar" : "Tutup sidebar");
+    button.title = collapsed ? "Buka sidebar" : "Tutup sidebar";
+  });
+}
+
+function activateRsPortalTab(tabId) {
+  document.querySelectorAll(".rs-portal-view").forEach((view) => view.classList.toggle("hidden", view.id !== tabId));
+  document.querySelectorAll("[data-rs-tab]").forEach((item) => {
+    const selected = item.dataset.rsTab === tabId;
+    item.classList.toggle("is-active", selected);
+    item.classList.toggle("active", selected);
+    item.setAttribute("aria-current", selected ? "page" : "false");
+  });
 }
 
 function bindLogin() {
@@ -137,6 +204,197 @@ async function bootstrap() {
   } catch {
     document.getElementById("loginView").classList.remove("is-hidden");
   }
+}
+
+const rsStatusLabels = { needs_response: "Perlu respons", responded: "Menunggu penilaian BPJS", completed: "Selesai di aplikasi" };
+let activeRsClarification = null;
+let activeRsTimelinePage = 1;
+let rsDashboardItems = [];
+const RS_DASHBOARD_PAGE_SIZE = 8;
+const RS_TIMELINE_PAGE_SIZE = 5;
+function openRsProfileModal() {
+  const modal = document.getElementById("rsProfileModal");
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeRsProfileModal() {
+  const modal = document.getElementById("rsProfileModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function closeRsClarificationModal() {
+  const modal = document.getElementById("rsClarificationModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function openRsClarificationModal() {
+  const modal = document.getElementById("rsClarificationModal");
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+}
+async function loadRsPortal() {
+  const refreshButton = document.getElementById("refreshRsPortalButton");
+  if (refreshButton) {
+    refreshButton.disabled = true;
+    refreshButton.textContent = "Memuat...";
+  }
+  try {
+    const [profile, stats, items] = await Promise.all([getRsProfile(), getRsDashboard(), getRsClarifications()]);
+    document.getElementById("rsFacilityName").textContent = `${profile.name} · ${profile.facility_code}`;
+    const statIds = { needs_response: "rsNeedsResponse", waiting_bpjs_review: "rsWaitingReview", needs_correction: "rsNeedsCorrection", completed: "rsCompleted", approaching_deadline: "rsApproachingDeadline" };
+    Object.entries(statIds).forEach(([key, id]) => { document.getElementById(id).textContent = formatNumber(stats[key] || 0); });
+    rsDashboardItems = items;
+    renderRsDashboardPage(1);
+    const profileCard = document.getElementById("rsProfileDetails");
+    profileCard.innerHTML = `<section class="rs-profile-card"><div class="rs-profile-hero"><div class="rs-profile-mark" aria-hidden="true">RS</div><div><p class="eyebrow">PROFIL FASILITAS KESEHATAN</p><h2>${escapeHtml(profile.name)}</h2><span class="rs-profile-status"><i></i> Terhubung ke portal KlaimGuard</span></div></div>
+      <div class="rs-profile-details"><article><span>Kode faskes</span><strong>${escapeHtml(profile.facility_code)}</strong></article><article><span>Alamat</span><strong>${escapeHtml(profile.address || "Belum diisi")}</strong></article></div>
+      <div class="rs-profile-summary"><h3>Ringkasan tindak lanjut</h3><div><article><strong>${formatNumber(stats.needs_response || 0)}</strong><span>Perlu respons</span></article><article><strong>${formatNumber(stats.waiting_bpjs_review || 0)}</strong><span>Menunggu BPJS</span></article><article><strong>${formatNumber(stats.completed || 0)}</strong><span>Selesai</span></article></div></div>
+      <p class="rs-profile-note">Gunakan portal ini untuk meninjau permintaan klarifikasi, mengirim penjelasan, dan melampirkan dokumen pendukung.</p></section>`;
+  } catch (error) { showToast(`Portal RS gagal dimuat: ${error.message}`, true); }
+  finally {
+    if (refreshButton) {
+      refreshButton.disabled = false;
+      refreshButton.textContent = "↻ Perbarui data";
+    }
+  }
+}
+
+function renderRsDashboardPage(page = 1) {
+  const totalPages = Math.ceil(rsDashboardItems.length / RS_DASHBOARD_PAGE_SIZE);
+  const safePage = Math.min(Math.max(1, page), Math.max(1, totalPages));
+  const start = (safePage - 1) * RS_DASHBOARD_PAGE_SIZE;
+  const visibleItems = rsDashboardItems.slice(start, start + RS_DASHBOARD_PAGE_SIZE);
+  renderRsCaseList("rsDashboardList", visibleItems);
+
+  const pagination = document.getElementById("rsDashboardPagination");
+  if (!rsDashboardItems.length) {
+    pagination.replaceChildren();
+    return;
+  }
+  renderPagination({
+    current_page: safePage,
+    total_pages: totalPages,
+    total_records: rsDashboardItems.length,
+    limit: RS_DASHBOARD_PAGE_SIZE,
+    item_label: "klarifikasi",
+  }, renderRsDashboardPage, "rsDashboardPagination");
+}
+
+function renderRsCaseList(targetId, items) {
+  const list = document.getElementById(targetId);
+  list.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement("p"); empty.className = "table-message"; empty.textContent = "Belum ada permintaan untuk faskes ini. Klarifikasi baru muncul setelah Admin Verifikator menyetujui dan mengirimnya. Pastikan profil faskes sesuai, lalu pilih Perbarui data."; list.append(empty); return;
+  }
+  items.forEach((item) => {
+    const button = document.createElement("button"); button.type = "button"; button.className = "rs-clarification-item";
+    const title = document.createElement("strong"); title.textContent = `${item.clarification_id} · ${item.claim_id}`;
+    const status = document.createElement("span"); status.textContent = item.status === "needs_response" && (item.response_version || 0) > 1 ? "Perlu perbaikan" : (rsStatusLabels[item.status] || item.status);
+    const due = document.createElement("small"); due.textContent = `Batas respons ${item.deadline_at ? new Date(item.deadline_at).toLocaleString("id-ID") : "belum tersedia"}`;
+    button.append(title, status, due); button.addEventListener("click", async () => {
+      await openRsClarification(item.clarification_id);
+    }); list.append(button);
+  });
+}
+
+async function openRsClarification(id) {
+  try {
+    const isDifferentClarification = activeRsClarification?.clarification_id !== id;
+    activeRsClarification = await getRsClarification(id);
+    if (isDifferentClarification) activeRsTimelinePage = 1;
+    const item = activeRsClarification;
+    document.getElementById("rsClarificationModalTitle").textContent = `Klarifikasi ${item.clarification_id} · Klaim ${item.claim_id}`;
+    const target = document.getElementById("rsClarificationDetail");
+    const findings = item.findings.map((finding) => `<article class="rs-finding"><span class="dispute-status">${escapeHtml(finding.type)}</span><h3>${escapeHtml(finding.title)}</h3><p>${escapeHtml(finding.description)}</p><p class="rs-regulation">${escapeHtml(finding.regulation_reference)}</p><ul>${finding.requested_documents.map((doc) => `<li>${escapeHtml(doc)}</li>`).join("")}</ul></article>`).join("");
+    const docs = item.response?.documents?.map((doc) => `<li><a href="/api/v1/rs/documents/${encodeURIComponent(doc.id)}" target="_blank" rel="noopener">${escapeHtml(doc.filename)}</a></li>`).join("") || "";
+    const locked = item.response?.status === "submitted";
+    target.innerHTML = `<header class="rs-detail-heading"><div><p class="eyebrow">${escapeHtml(item.clarification_id)}</p><h2>Klaim ${escapeHtml(item.claim_id)}</h2><p>SEP ${escapeHtml(item.sep_number || "-")} · ${escapeHtml(item.facility_name)}</p><p>Diterbitkan ${item.issued_at ? new Date(item.issued_at).toLocaleDateString("id-ID") : "-"} · Batas respons ${item.deadline_at ? new Date(item.deadline_at).toLocaleString("id-ID") : "-"}</p></div><span class="dispute-status">${escapeHtml(rsStatusLabels[item.status] || item.status)}</span></header>
+      <div class="rs-stepper"><span class="is-complete">Dikirim BPJS</span><span class="${item.received_at ? "is-complete" : ""}">Diterima RS</span><span class="${item.status === "responded" || item.status === "completed" ? "is-complete" : ""}">Direspons RS</span><span class="${item.status === "completed" ? "is-complete" : ""}">Dinilai Ulang</span><span class="${item.status === "completed" ? "is-complete" : ""}">Selesai</span></div>${item.status === "completed" ? '<p class="rs-locked-note">Selesai di aplikasi. Ini hanya menutup pencatatan pada KlaimGuard AI, bukan keputusan resmi BPJS.</p>' : ""}
+      <section class="rs-claim-summary"><h3>Ringkasan klaim</h3><p>${escapeHtml(item.claim_summary.doctor_notes)}</p><p>Kode: ${escapeHtml(item.claim_summary.billing_codes)} · Lama rawat: ${item.claim_summary.length_of_stay} hari</p></section>
+      <section><h3>Temuan dan dokumen yang diminta</h3><div class="rs-findings">${findings}</div></section>
+      <section class="rs-response-form"><h3>Respons rumah sakit</h3>${item.followup_notes ? `<p class="rs-locked-note">Permintaan tambahan dari BPJS: ${escapeHtml(item.followup_notes)}</p>` : ""}${locked ? `<p class="rs-locked-note">Respons versi ${item.response.version} sudah dikirim dan terkunci.</p>` : `<label>Jenis penjelasan<select id="rsExplanationType"><option value="administratif">Administratif</option><option value="koding">Koding</option><option value="klinis">Klinis</option></select></label><label>Catatan respons<textarea id="rsResponseNotes" rows="5" maxlength="10000" placeholder="Tuliskan penjelasan dan dokumen pendukung..."></textarea></label><label>Unggah dokumen (PDF/JPG, maks. 10 MB per file)<input id="rsResponseFiles" type="file" accept="application/pdf,image/jpeg,.pdf,.jpg,.jpeg" multiple /></label><div class="rs-form-actions"><button class="button button-quiet" id="rsSaveDraftButton" type="button">Simpan Draf</button><button class="button button-primary" id="rsSubmitResponseButton" type="button">Kirim Respons</button></div>`}<ul class="rs-document-list">${docs}</ul></section>
+      <section class="rs-timeline-section"><h3>Riwayat aktivitas</h3><ol class="rs-timeline" id="rsTimelineList"></ol><nav class="rs-timeline-pagination" id="rsTimelinePagination" aria-label="Halaman riwayat aktivitas"></nav></section>`;
+    renderRsTimeline(item.timeline || []);
+    if (!locked && item.response) {
+      document.getElementById("rsExplanationType").value = item.response.explanation_type || "administratif";
+      document.getElementById("rsResponseNotes").value = item.response.notes || "";
+    }
+    if (!locked) bindRsResponseActions(item.clarification_id);
+    openRsClarificationModal();
+  } catch (error) { showToast(error.message, true); }
+}
+
+function renderRsTimeline(entries) {
+  const list = document.getElementById("rsTimelineList");
+  const controls = document.getElementById("rsTimelinePagination");
+  if (!list || !controls) return;
+  const totalPages = Math.max(1, Math.ceil(entries.length / RS_TIMELINE_PAGE_SIZE));
+  activeRsTimelinePage = Math.min(Math.max(1, activeRsTimelinePage), totalPages);
+  const start = (activeRsTimelinePage - 1) * RS_TIMELINE_PAGE_SIZE;
+  const visible = entries.slice(start, start + RS_TIMELINE_PAGE_SIZE);
+  list.replaceChildren();
+  if (!visible.length) {
+    const empty = document.createElement("li");
+    empty.textContent = "Belum ada aktivitas.";
+    list.append(empty);
+  } else {
+    visible.forEach((entry) => {
+      const row = document.createElement("li");
+      const action = document.createElement("strong");
+      action.textContent = entry.action || "Aktivitas";
+      const detail = document.createElement("span");
+      const when = entry.at ? new Date(entry.at).toLocaleString("id-ID") : "Waktu tidak tersedia";
+      detail.textContent = `${when}${entry.notes ? ` · ${entry.notes}` : ""}`;
+      row.append(action, detail);
+      list.append(row);
+    });
+  }
+  controls.replaceChildren();
+  if (totalPages <= 1) return;
+  const previous = document.createElement("button");
+  previous.type = "button";
+  previous.className = "button button-quiet";
+  previous.textContent = "Sebelumnya";
+  previous.disabled = activeRsTimelinePage === 1;
+  previous.addEventListener("click", () => { activeRsTimelinePage -= 1; renderRsTimeline(entries); });
+  const page = document.createElement("span");
+  page.textContent = `Halaman ${activeRsTimelinePage} dari ${totalPages}`;
+  const next = document.createElement("button");
+  next.type = "button";
+  next.className = "button button-quiet";
+  next.textContent = "Berikutnya";
+  next.disabled = activeRsTimelinePage === totalPages;
+  next.addEventListener("click", () => { activeRsTimelinePage += 1; renderRsTimeline(entries); });
+  controls.append(previous, page, next);
+}
+
+function bindRsResponseActions(id) {
+  document.getElementById("rsResponseFiles").addEventListener("change", async (event) => {
+    const files = [...event.target.files];
+    for (const file of files) {
+      try { await uploadRsDocument(id, file); showToast(`${file.name} diunggah.`); }
+      catch (error) { showToast(error.message, true); }
+    }
+    await openRsClarification(id);
+  });
+  document.getElementById("rsSaveDraftButton").addEventListener("click", async () => {
+    try {
+      await saveRsResponse(id, document.getElementById("rsExplanationType").value, document.getElementById("rsResponseNotes").value);
+      showToast("Draf respons tersimpan."); await openRsClarification(id); await loadRsPortal();
+    } catch (error) { showToast(error.message, true); }
+  });
+  document.getElementById("rsSubmitResponseButton").addEventListener("click", async () => {
+    try {
+      await saveRsResponse(id, document.getElementById("rsExplanationType").value, document.getElementById("rsResponseNotes").value);
+      await submitRsResponse(id); showToast("Respons berhasil dikirim ke BPJS.");
+      await openRsClarification(id); await loadRsPortal();
+    } catch (error) { showToast(error.message, true); }
+  });
 }
 
 function setConnectionStatus(connected, totalClaims = 0) {
@@ -279,13 +537,13 @@ function bindFilters() {
     });
   });
   document.getElementById("claimForm").addEventListener("submit", analyzeManualClaim);
-  document.getElementById("sidebarToggleBtn").addEventListener("click", (event) => {
-    const button = event.currentTarget;
-    const collapsed = document.getElementById("appSidebar").classList.toggle("collapsed");
-    button.setAttribute("aria-expanded", String(!collapsed));
-    button.setAttribute("aria-label", collapsed ? "Buka sidebar" : "Tutup sidebar");
-    button.title = collapsed ? "Buka sidebar" : "Tutup sidebar";
+  document.getElementById("facilityCreateForm").addEventListener("submit", submitFacilityForm);
+  document.getElementById("facilityClaimPicker").addEventListener("change", updateSelectedFacilityClaims);
+  document.getElementById("facilityClaimSearch").addEventListener("input", () => {
+    window.clearTimeout(facilityClaimSearchTimer);
+    facilityClaimSearchTimer = window.setTimeout(() => loadFacilityClaimOptions(), 250);
   });
+  document.getElementById("refreshFacilitiesButton").addEventListener("click", loadFacilitiesPanel);
   document.querySelectorAll(".sidebar-nav [data-tab]").forEach((item) => {
     item.addEventListener("click", () => activateTab(item.dataset.tab));
   });
@@ -361,7 +619,8 @@ async function runBatch(limit = 100, button = document.getElementById("batchAudi
 }
 
 function activateTab(tabName) {
-  if (tabName === "batch" && document.body.dataset.role !== "admin_audit") return;
+  if (tabName === "batch" && document.body.dataset.role !== "admin_bpjs") return;
+  if (tabName === "facilities" && document.body.dataset.role !== "admin_bpjs") return;
   document.querySelectorAll(".tab-panel").forEach((panel) => {
     panel.classList.toggle("hidden", panel.id !== `${tabName}Tab`);
   });
@@ -370,30 +629,157 @@ function activateTab(tabName) {
     item.classList.toggle("active", active);
     item.setAttribute("aria-current", active ? "page" : "false");
   });
-  if (tabName === "audit") loadAuditHistory();
+  if (tabName === "audit") { loadAuditHistory(); loadHospitalActivity(); }
   if (tabName === "disputes") document.dispatchEvent(new Event("klaimguard:load-disputes"));
   if (tabName === "reports") loadReportData();
+  if (tabName === "facilities") loadFacilitiesPanel();
+}
+
+async function loadFacilitiesPanel() {
+  try {
+    const facilities = await getFacilities();
+    const body = document.getElementById("facilityListBody");
+    body.replaceChildren();
+    document.getElementById("facilityCountLabel").textContent = `${formatNumber(facilities.length)} faskes terdaftar`;
+    if (!facilities.length) {
+      body.innerHTML = '<tr><td colspan="4" class="table-message">Belum ada faskes terdaftar.</td></tr>';
+    } else {
+      facilities.forEach((facility) => {
+        const row = document.createElement("tr");
+        [facility.name, facility.facility_code, facility.username || "Akun belum tersedia", formatNumber(facility.claim_count)].forEach((value) => {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.append(cell);
+        });
+        body.append(row);
+      });
+    }
+    await loadFacilityClaimOptions();
+  } catch (error) {
+    document.getElementById("facilityListBody").innerHTML = `<tr><td colspan="4" class="table-message is-error">${escapeHtml(error.message)}</td></tr>`;
+    document.getElementById("facilityCountLabel").textContent = "Data faskes tidak dapat dimuat";
+  }
+}
+
+async function loadFacilityClaimOptions() {
+  const picker = document.getElementById("facilityClaimPicker");
+  try {
+    const claims = await searchFacilityClaims(document.getElementById("facilityClaimSearch").value.trim());
+    picker.replaceChildren();
+    claims.forEach((claim) => {
+      const option = document.createElement("option");
+      option.value = claim.claim_id;
+      option.textContent = claim.current_facility
+        ? `${claim.claim_id} · saat ini: ${claim.current_facility}`
+        : `${claim.claim_id} · belum dialokasikan`;
+      option.selected = selectedFacilityClaimIds.has(claim.claim_id);
+      picker.append(option);
+    });
+    if (!claims.length) {
+      const option = document.createElement("option");
+      option.disabled = true;
+      option.textContent = "Klaim tidak ditemukan";
+      picker.append(option);
+    }
+  } catch (error) {
+    picker.replaceChildren();
+    const option = document.createElement("option");
+    option.disabled = true;
+    option.textContent = error.message;
+    picker.append(option);
+  }
+}
+
+function updateSelectedFacilityClaims() {
+  const picker = document.getElementById("facilityClaimPicker");
+  const visible = [...picker.options].filter((option) => option.value);
+  visible.forEach((option) => {
+    if (option.selected) selectedFacilityClaimIds.add(option.value);
+    else selectedFacilityClaimIds.delete(option.value);
+  });
+}
+
+async function submitFacilityForm(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const result = document.getElementById("facilityFormResult");
+  const button = document.getElementById("createFacilityButton");
+  if (!selectedFacilityClaimIds.size) {
+    result.textContent = "Pilih setidaknya satu klaim untuk dialokasikan ke faskes.";
+    result.classList.add("is-error");
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Mendaftarkan...";
+  result.textContent = "";
+  result.classList.remove("is-error");
+  try {
+    const created = await createFacility({
+      name: document.getElementById("facilityNameInput").value.trim(),
+      facility_code: document.getElementById("facilityCodeInput").value.trim(),
+      address: document.getElementById("facilityAddressInput").value.trim(),
+      username: document.getElementById("facilityUsernameInput").value.trim(),
+      password: document.getElementById("facilityPasswordInput").value,
+      claim_ids: [...selectedFacilityClaimIds],
+    });
+    result.textContent = `Faskes ${created.name} terdaftar. Akun ${created.username} dibuat dan ${formatNumber(created.assigned_claims)} klaim dialokasikan.`;
+    form.reset();
+    selectedFacilityClaimIds.clear();
+    await loadFacilitiesPanel();
+    showToast("Faskes berhasil didaftarkan.");
+  } catch (error) {
+    result.textContent = error.message;
+    result.classList.add("is-error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Daftarkan Faskes";
+  }
 }
 
 async function loadAuditHistory(page) {
   const body = document.getElementById("auditHistoryBody");
-  body.innerHTML = '<tr><td colspan="6" class="table-message">Memuat riwayat...</td></tr>';
+  body.innerHTML = '<tr><td colspan="5" class="table-message">Memuat riwayat...</td></tr>';
   try {
     const targetPage = page || 1;
     const pageData = await getAuditLogs(targetPage, state.limit);
     state.auditPage = targetPage;
     if (!pageData.data.length) {
-      body.innerHTML = '<tr><td colspan="6" class="table-message">Belum ada keputusan audit yang tersimpan.</td></tr>';
+      body.innerHTML = '<tr><td colspan="5" class="table-message">Belum ada keputusan audit yang tersimpan.</td></tr>';
     } else {
       body.innerHTML = pageData.data.map((entry) => {
         const created = entry.timestamp ? new Date(entry.timestamp).toLocaleString("id-ID") : "-";
-        const hash = String(entry.current_hash || "");
-        return `<tr><td>${escapeHtml(created)}</td><td><strong>${escapeHtml(entry.claim_id)}</strong></td><td>${escapeHtml(entry.verifier_id)}</td><td>${escapeHtml(entry.decision)}</td><td>${escapeHtml(entry.notes || "-")}</td><td><code title="${escapeHtml(hash)}">${escapeHtml(hash.slice(0, 12) || "-")}</code></td></tr>`;
+        return `<tr><td>${escapeHtml(created)}</td><td><strong>${escapeHtml(entry.claim_id)}</strong></td><td>${escapeHtml(entry.verifier_id)}</td><td>${escapeHtml(entry.decision)}</td><td>${escapeHtml(entry.notes || "-")}</td></tr>`;
       }).join("");
     }
     renderPagination(pageData, (nextPage) => loadAuditHistory(nextPage), "auditPagination");
   } catch (error) {
+    body.innerHTML = `<tr><td colspan="5" class="table-message is-error">${escapeHtml(error.message)}</td></tr>`;
+  }
+}
+
+async function loadHospitalActivity(page = 1) {
+  const body = document.getElementById("hospitalActivityBody");
+  const pagination = document.getElementById("hospitalActivityPagination");
+  try {
+    const pageSize = 10;
+    const result = await getHospitalActivity(page, pageSize);
+    body.replaceChildren();
+    if (!result.data.length) {
+      const row = document.createElement("tr"); row.innerHTML = '<td colspan="6" class="table-message">Belum ada aktivitas portal RS.</td>'; body.append(row);
+      pagination.replaceChildren();
+      return;
+    }
+    result.data.forEach((entry) => {
+      const row = document.createElement("tr");
+      [entry.created_at ? new Date(entry.created_at).toLocaleString("id-ID") : "-", entry.user_id, entry.facility_code, entry.dispute_case_id || "-", entry.action, [entry.response_version ? `Versi ${entry.response_version}` : "", entry.details || ""].filter(Boolean).join(" · ") || "-"].forEach((value) => {
+        const cell = document.createElement("td"); cell.textContent = value; row.append(cell);
+      });
+      body.append(row);
+    });
+    renderPagination({ ...result, limit: pageSize, item_label: "aktivitas RS" }, (nextPage) => loadHospitalActivity(nextPage), "hospitalActivityPagination");
+  } catch (error) {
     body.innerHTML = `<tr><td colspan="6" class="table-message is-error">${escapeHtml(error.message)}</td></tr>`;
+    pagination.replaceChildren();
   }
 }
 
@@ -807,34 +1193,112 @@ function exportReportPdf() {
     window.print();
     return;
   }
-  const pdf = new window.jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pdf = new window.jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const data = state.stats || {};
   const fin = state.analyticsData?.financial_summary || {};
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(16);
-  pdf.text("KlaimGuard AI · Laporan Eksekutif Analitik & Audit Medis", 14, 18);
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-  const lines = [
-    `Total Klaim Diaudit: ${formatNumber(data.total_claims)} (Total Tagihan: ${formatIdr(fin.total_charge || 0)})`,
-    `Klaim Aman: ${formatNumber(data.safe_claims)} · Indikasi Anomali: ${formatNumber(data.fraud_claims)} (${formatNumber(data.upcoding_count)} Upcoding, ${formatNumber(data.unbundling_count)} Unbundling)`,
-    `Potensi Penghematan Dana JKN: ${formatIdr(data.total_potential_saving_idr)}`,
-    `Cakupan Verifikasi Manusia: ${(data.audit_coverage_pct || 0).toFixed(1)}%`,
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 14;
+  const charts = [
+    ["financialComparisonChart", "Perbandingan finansial"],
+    ["losCorrelationChart", "Korelasi lama rawat dan biaya"],
+    ["costRiskDistChart", "Distribusi biaya dan risiko"],
+    ["topAnomaliesChart", "Anomali yang paling sering ditemukan"],
+  ].filter(([id]) => document.getElementById(id));
+  const drawHeader = (subtitle) => {
+    pdf.setFillColor(11, 43, 29);
+    pdf.rect(0, 0, pageWidth, 29, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(17);
+    pdf.text("KlaimGuard AI", margin, 13);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text(subtitle, margin, 21);
+    pdf.setFontSize(8);
+    pdf.text(`Dibuat ${new Date().toLocaleString("id-ID")}`, pageWidth - margin, 21, { align: "right" });
+    pdf.setTextColor(34, 48, 66);
+  };
+  const drawFooter = (pageNumber) => {
+    const height = pdf.internal.pageSize.getHeight();
+    pdf.setDrawColor(218, 227, 222);
+    pdf.line(margin, height - 10, pageWidth - margin, height - 10);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(104, 117, 122);
+    pdf.text("KlaimGuard AI · Ringkasan analitik untuk bahan telaah verifikator", margin, height - 5);
+    pdf.text(`Halaman ${pageNumber}`, pageWidth - margin, height - 5, { align: "right" });
+  };
+  const cards = [
+    ["TOTAL KLAIM", formatNumber(data.total_claims)],
+    ["KLAIM AMAN", formatNumber(data.safe_claims)],
+    ["INDIKASI ANOMALI", formatNumber(data.fraud_claims)],
+    ["POTENSI PENGHEMATAN", formatIdr(data.total_potential_saving_idr)],
   ];
-  pdf.text(lines, 14, 28);
-  
-  let currentY = 54;
-  ["financialComparisonChart", "losCorrelationChart", "costRiskDistChart", "topAnomaliesChart"].forEach((id) => {
-    const canvas = document.getElementById(id);
-    if (canvas && currentY < 235) {
-      try {
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 14, currentY, 180, 50);
-        currentY += 54;
-      } catch (e) {
-        // canvas might be empty or tainted
-      }
-    }
+  drawHeader("Laporan eksekutif analitik dan audit klaim");
+  const cardGap = 5;
+  const cardWidth = (pageWidth - margin * 2 - cardGap * (cards.length - 1)) / cards.length;
+  cards.forEach(([label, value], index) => {
+    const x = margin + index * (cardWidth + cardGap);
+    pdf.setFillColor(247, 250, 248);
+    pdf.setDrawColor(220, 229, 223);
+    pdf.roundedRect(x, 36, cardWidth, 24, 2, 2, "FD");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    pdf.setTextColor(92, 108, 99);
+    pdf.text(label, x + 5, 44);
+    pdf.setFontSize(value.length > 19 ? 11 : 15);
+    pdf.setTextColor(25, 45, 37);
+    pdf.text(value, x + 5, 54);
   });
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.setTextColor(65, 78, 73);
+  const coverage = Number(data.audit_coverage_pct) || 0;
+  pdf.text(`Total tagihan ${formatIdr(fin.total_charge || 0)}   ·   Upcoding ${formatNumber(data.upcoding_count)}   ·   Unbundling ${formatNumber(data.unbundling_count)}   ·   Cakupan verifikasi ${coverage.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`, margin, 68);
+  const drawChart = (chart, index, y) => {
+    const [id, title] = chart;
+    const canvas = document.getElementById(id);
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    const boxWidth = (pageWidth - margin * 2 - 8) / 2;
+    const x = margin + col * (boxWidth + 8);
+    const boxY = y + row * 73;
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(220, 229, 223);
+    pdf.roundedRect(x, boxY, boxWidth, 68, 2, 2, "FD");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(25, 55, 42);
+    pdf.text(title, x + 5, boxY + 7);
+    try {
+      const image = canvas.toDataURL("image/png");
+      const imageWidth = boxWidth - 10;
+      const imageHeight = 53;
+      const ratio = Math.min(imageWidth / canvas.width, imageHeight / canvas.height);
+      const width = canvas.width * ratio;
+      const height = canvas.height * ratio;
+      pdf.addImage(image, "PNG", x + (boxWidth - width) / 2, boxY + 10 + (imageHeight - height) / 2, width, height);
+    } catch { /* skip an unavailable chart image */ }
+  };
+  charts.slice(0, 2).forEach((chart, index) => drawChart(chart, index, 75));
+  drawFooter(1);
+  if (charts.length > 2) {
+    pdf.addPage();
+    drawHeader("Visualisasi lanjutan dan catatan laporan");
+    charts.slice(2).forEach((chart, index) => drawChart(chart, index, 39));
+    let noteY = 118;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(25, 55, 42);
+    pdf.text("Sumber regulasi yang tercatat", margin, noteY);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(65, 78, 73);
+    const sources = state.reportSources?.length ? state.reportSources : ["Tidak ada sumber regulasi tercatat"];
+    const sourceLines = pdf.splitTextToSize(sources.join(" · "), pageWidth - margin * 2);
+    pdf.text(sourceLines.slice(0, 3), margin, noteY + 6);
+    drawFooter(2);
+  }
   pdf.save("KlaimGuard-Laporan-Eksekutif-Analitik.pdf");
   showToast("Laporan PDF berhasil diunduh.");
 }

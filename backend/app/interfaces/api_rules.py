@@ -10,7 +10,7 @@ from app.security.rbac import UserRole, require_roles
 router = APIRouter(
     prefix="/api/v1/rules",
     tags=["Regulatory Knowledge Base"],
-    dependencies=[Depends(require_roles(UserRole.ADMIN_BPJS, UserRole.ADMIN_AUDIT))],
+    dependencies=[Depends(require_roles(UserRole.ADMIN_BPJS))],
 )
 
 

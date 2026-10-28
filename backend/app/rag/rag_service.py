@@ -2,6 +2,7 @@ from typing import Any
 
 from app.rag.vector_store import LocalVectorStore
 from app.rag.vector_store import ChromaVectorManager
+from app.rag.regulation_metadata import old_regulation_replacement
 
 
 class RegulatoryCopilotService:
@@ -36,6 +37,19 @@ class RegulatoryCopilotService:
         }
 
     def generate_answer(self, query: str) -> dict[str, Any]:
+        replacement_notice = old_regulation_replacement(query)
+        if replacement_notice:
+            return {
+                "answer_markdown": (
+                    "## Status regulasi\n" + replacement_notice +
+                    "\n\nJawaban dan draf menggunakan dokumen yang berlaku."
+                ),
+                "citations": [],
+                "drafted_dispute_letter": (
+                    "Draf belum dibuat karena pertanyaan merujuk regulasi yang telah dicabut. "
+                    "Gunakan Permenkes 26 Tahun 2021 dan verifikasi ketentuan terkait terlebih dahulu."
+                ),
+            }
         context_chunks = self.vector_store.similarity_search(query, top_k=4)
         citations = [self._citation(chunk) for chunk in context_chunks]
         if not citations:
@@ -105,12 +119,19 @@ class RegulatoryCopilotService:
         )
         evidence = self.generate_answer(search_query)
         citations = evidence["citations"]
+        if not citations:
+            return {
+                "formal_letter": (
+                    "Draf sanggahan belum dapat dibuat karena tidak ditemukan dasar "
+                    "dari sumber yang berlaku. Periksa status regulasi dan dokumen "
+                    "pendukung sebelum menyusun surat."
+                ),
+                "citations": [],
+            }
         citation_text = "\n".join(
             f"- {item['source_document']}, halaman {item['page_number']}"
             for item in citations
         )
-        if not citation_text:
-            citation_text = f"- {legal_source}; {regulation_ref}"
         formal_letter = (
             "Kepada Yth.\nKomite Audit Klinis Rumah Sakit\n\n"
             f"Perihal: Klarifikasi klaim JKN {claim_id} (SEP {sep_number})\n\n"
@@ -118,7 +139,7 @@ class RegulatoryCopilotService:
             f"{violation_type} pada pasangan kode {primary_code} dan "
             f"{conflicting_code}. Resume klinis yang menjadi dasar telaah: "
             f"{clinical_narrative}\n\n"
-            f"Dasar hukum: {legal_source}; {regulation_ref}.\n"
+            f"Dasar hukum berdasarkan dokumen berlaku:\n{citation_text}\n"
             f"Rekomendasi koreksi: {recommendation}\n\n"
             f"Dokumen pendukung yang ditemukan:\n{citation_text}\n\n"
             "Mohon disampaikan klarifikasi dan dokumen klinis pendukung apabila "

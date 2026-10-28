@@ -97,6 +97,11 @@ class ChromaVectorManager:
                         "regulation_type": str(
                             chunk.get("regulation_type") or "REGULATORY_DOCUMENT"
                         ),
+                        "legal_status": str(chunk.get("legal_status") or "reference"),
+                        "berlaku_sejak": str(chunk.get("berlaku_sejak") or ""),
+                        "dicabut_sejak": str(chunk.get("dicabut_sejak") or ""),
+                        "replaced_by": str(chunk.get("replaced_by") or ""),
+                        "document_kind": str(chunk.get("document_kind") or "reference"),
                     }
                     for _chunk_id, chunk in group
                 ],
@@ -108,6 +113,7 @@ class ChromaVectorManager:
         query_text: str,
         top_k: int = 4,
         filter_doc: Optional[str] = None,
+        active_only: bool = True,
     ) -> list[dict[str, Any]]:
         if top_k < 1:
             raise ValueError("top_k must be at least 1.")
@@ -119,8 +125,15 @@ class ChromaVectorManager:
             "n_results": min(top_k, count),
             "include": ["documents", "metadatas", "distances"],
         }
+        filters: list[dict[str, Any]] = []
         if filter_doc:
-            options["where"] = {"source_document": filter_doc}
+            filters.append({"source_document": filter_doc})
+        if active_only:
+            filters.append({"legal_status": {"$ne": "superseded"}})
+        if len(filters) == 1:
+            options["where"] = filters[0]
+        elif filters:
+            options["where"] = {"$and": filters}
         result = self.collection.query(**options)
         ids = (result.get("ids") or [[]])[0]
         documents = (result.get("documents") or [[]])[0]
@@ -137,6 +150,10 @@ class ChromaVectorManager:
                     "regulation_type": metadata.get(
                         "regulation_type", "REGULATORY_DOCUMENT"
                     ),
+                    "legal_status": metadata.get("legal_status", "unclassified"),
+                    "berlaku_sejak": metadata.get("berlaku_sejak", ""),
+                    "dicabut_sejak": metadata.get("dicabut_sejak", ""),
+                    "replaced_by": metadata.get("replaced_by", ""),
                     "text": text,
                     "similarity_score": max(0.0, min(1.0, 1.0 - float(distance))),
                 }
@@ -165,5 +182,9 @@ class LocalVectorStore:
     def add_documents(self, chunks: list[dict[str, Any]]) -> None:
         self.manager.insert_chunks(chunks)
 
-    def similarity_search(self, query: str, top_k: int = 4) -> list[dict[str, Any]]:
-        return self.manager.query_similar_regulations(query, top_k=top_k)
+    def similarity_search(
+        self, query: str, top_k: int = 4, active_only: bool = True
+    ) -> list[dict[str, Any]]:
+        return self.manager.query_similar_regulations(
+            query, top_k=top_k, active_only=active_only
+        )

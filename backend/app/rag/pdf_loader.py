@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from PyPDF2 import PdfReader
+from app.rag.regulation_metadata import metadata_for_document
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -206,6 +207,7 @@ class SmartRegulationLoader:
                         "doc_name": str(pages[0].get("doc_name") or Path(source).stem),
                         "page_number": page_number,
                         "regulation_type": _regulation_type(source),
+                        **metadata_for_document(source),
                         "text": text,
                     }
                 )

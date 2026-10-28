@@ -69,6 +69,9 @@ export function getClaims(page, limit, search = "", status = "", fraudType = "")
 export function getAuditLogs(page = 1, limit = 10) {
   return request(`${API_ROOT}/audit/logs?${new URLSearchParams({ page: String(page), limit: String(limit) })}`);
 }
+export function getHospitalActivity(page = 1, limit = 50) {
+  return request(`${API_ROOT}/audit/hospital-activity?${new URLSearchParams({ page: String(page), limit: String(limit) })}`);
+}
 
 export function getClaimDetail(claimId) {
   return request(`${API_ROOT}/claims/${encodeURIComponent(claimId)}`);
@@ -120,11 +123,25 @@ export function getDisputes(status = "") {
   return request(API_ROOT + "/disputes/?" + params);
 }
 
-export function createDispute(claimId) {
+export function deleteDispute(disputeId) {
+  return request(API_ROOT + "/disputes/" + encodeURIComponent(disputeId), { method: "DELETE" });
+}
+
+export function getDisputeSummary() {
+  return request(API_ROOT + "/disputes/summary");
+}
+
+export function createDispute(claimId, templateCode = "formal") {
   return request(API_ROOT + "/disputes/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ claim_id: claimId }),
+    body: JSON.stringify({ claim_id: claimId, template_code: templateCode }),
+  });
+}
+
+export function addDisputeComment(disputeId, body) {
+  return request(API_ROOT + "/disputes/" + encodeURIComponent(disputeId) + "/comments", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body }),
   });
 }
 
@@ -153,6 +170,40 @@ export function markDisputeSent(disputeId, recipient, submissionReference) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ recipient, submission_reference: submissionReference }),
+  });
+}
+
+export function getRsDashboard() { return request(`${API_ROOT}/rs/dashboard`); }
+export function getRsClarifications() { return request(`${API_ROOT}/rs/clarifications`); }
+export function getRsClarification(id) { return request(`${API_ROOT}/rs/clarifications/${encodeURIComponent(id)}`); }
+export function saveRsResponse(id, explanationType, notes) {
+  return request(`${API_ROOT}/rs/clarifications/${encodeURIComponent(id)}/response`, {
+    method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ explanation_type: explanationType, notes }),
+  });
+}
+export function uploadRsDocument(id, file) {
+  const data = new FormData(); data.append("file", file);
+  return request(`${API_ROOT}/rs/clarifications/${encodeURIComponent(id)}/documents`, { method: "POST", body: data });
+}
+export function submitRsResponse(id) {
+  return request(`${API_ROOT}/rs/clarifications/${encodeURIComponent(id)}/submit`, { method: "POST" });
+}
+export function getRsProfile() { return request(`${API_ROOT}/rs/profile`); }
+export function getFacilities() { return request(`${API_ROOT}/facilities`); }
+export function searchFacilityClaims(search = "") {
+  return request(`${API_ROOT}/facilities/claim-options?${new URLSearchParams({ search })}`);
+}
+export function createFacility(payload) {
+  return request(`${API_ROOT}/facilities`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+export function reevaluateDispute(id, action, notes = "") {
+  return request(`${API_ROOT}/disputes/${encodeURIComponent(id)}/reevaluate`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, notes }),
   });
 }
 

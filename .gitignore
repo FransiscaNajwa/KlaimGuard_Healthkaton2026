@@ -1,0 +1,29 @@
+# SQLite database files
+*.sqlite3
+backend/jkn_fraud.db
+backend/jkn_fraud.db-shm
+backend/jkn_fraud.db-wal
+
+# ChromaDB vector index
+backend/ml_models/vector_index/
+
+# File uploads
+backend/uploads/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# ML model (generated at build time)
+backend/ml_models/*.pkl
+
+# IDE
+.vscode/
+.idea/

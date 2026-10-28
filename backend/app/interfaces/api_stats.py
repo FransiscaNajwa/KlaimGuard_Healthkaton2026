@@ -19,7 +19,7 @@ router = APIRouter(
 @router.get("/overview", response_model=StatsOverviewResponse)
 def dashboard_overview(
     db: Session = Depends(get_db_session),
-    _current_user: dict[str, str] = Depends(require_roles(UserRole.ADMIN_BPJS, UserRole.ADMIN_AUDIT)),
+    _current_user: dict[str, str] = Depends(require_roles(UserRole.ADMIN_BPJS)),
 ) -> StatsOverviewResponse:
     return get_dashboard_overview(db)
 
@@ -27,6 +27,6 @@ def dashboard_overview(
 @router.get("/analytics", response_model=AnalyticsDashboardResponse)
 def analytics_dashboard(
     db: Session = Depends(get_db_session),
-    _current_user: dict[str, str] = Depends(require_roles(UserRole.ADMIN_BPJS, UserRole.ADMIN_AUDIT)),
+    _current_user: dict[str, str] = Depends(require_roles(UserRole.ADMIN_BPJS)),
 ) -> AnalyticsDashboardResponse:
     return get_analytics_dashboard_data(db)

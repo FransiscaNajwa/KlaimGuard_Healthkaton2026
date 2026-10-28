@@ -26,7 +26,7 @@ from app.use_cases.audit_service import get_detailed_claim, run_batch_simulation
 router = APIRouter(
     prefix="/api/v1/claims",
     tags=["Claims Audit"],
-    dependencies=[Depends(require_roles(UserRole.ADMIN_BPJS, UserRole.ADMIN_AUDIT))],
+    dependencies=[Depends(require_roles(UserRole.ADMIN_BPJS))],
 )
 ANONYMIZER = DataAnonymizer()
 
@@ -73,7 +73,7 @@ def get_claim_detail(
 def analyze_manual_claim(
     request: ManualClaimAnalysisRequest,
     db: Session = Depends(get_db_session),
-    _current_user: dict[str, str] = Depends(require_roles(UserRole.ADMIN_AUDIT)),
+    _current_user: dict[str, str] = Depends(require_roles(UserRole.ADMIN_BPJS)),
 ) -> ManualClaimAnalysisResponse:
     analysis = HybridFraudDetector(db).analyze_claim(
         {
@@ -122,7 +122,7 @@ def analyze_manual_claim(
 def simulate_batch(
     request: BatchAuditRequest,
     db: Session = Depends(get_db_session),
-    _current_user: dict[str, str] = Depends(require_roles(UserRole.ADMIN_AUDIT)),
+    _current_user: dict[str, str] = Depends(require_roles(UserRole.ADMIN_BPJS)),
 ) -> BatchAuditResponse:
     response = run_batch_simulation(db, request.limit)
     for claim in response.results:

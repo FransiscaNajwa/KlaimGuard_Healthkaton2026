@@ -219,6 +219,7 @@ class DraftDisputeRequest(BaseModel):
 
 class DisputeCreateRequest(BaseModel):
     claim_id: str = Field(min_length=1, max_length=50)
+    template_code: Literal["formal", "ringkas", "rinci"] = "formal"
 
 
 class DisputeUpdateRequest(BaseModel):
@@ -226,7 +227,12 @@ class DisputeUpdateRequest(BaseModel):
 
 
 class DisputeReviewRequest(BaseModel):
-    action: Literal["approve", "request_revision", "close"]
+    action: Literal["approve", "request_revision"]
+    notes: str = Field(default="", max_length=3000)
+
+
+class DisputeReevaluationRequest(BaseModel):
+    action: Literal["accept", "request_additional"]
     notes: str = Field(default="", max_length=3000)
 
 
@@ -246,11 +252,48 @@ class DisputeEventResponse(BaseModel):
     created_at: datetime
 
 
+class DisputeCommentCreate(BaseModel):
+    body: str = Field(min_length=3, max_length=4000)
+
+
+class DisputeCommentResponse(BaseModel):
+    actor_id: str
+    actor_role: str
+    body: str
+    created_at: datetime
+
+
+class DisputeVersionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    version_number: int
+    letter_body: str
+    actor_id: str
+    note: str
+    created_at: datetime
+
+
+class DisputeSummaryResponse(BaseModel):
+    total: int
+    drafts: int
+    in_review: int
+    overdue_review: int
+    needs_revision: int
+    approved: int
+    sent: int
+    closed: int
+    waiting_hospital_response: int = 0
+    waiting_reassessment: int = 0
+    late_hospital_response: int = 0
+    oldest_pending_hours: Optional[int] = None
+
+
 class DisputeResponse(BaseModel):
     dispute_id: str
     claim_id: str
     sep_number: str
     status: str
+    template_code: str = "formal"
     letter_body: str
     legal_source: str
     regulation_ref: str
@@ -263,6 +306,15 @@ class DisputeResponse(BaseModel):
     submission_reference: Optional[str]
     submitted_at: Optional[datetime]
     sent_at: Optional[datetime]
+    deadline_at: Optional[datetime] = None
+    received_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     history: list[DisputeEventResponse] = Field(default_factory=list)
+    comments: list[DisputeCommentResponse] = Field(default_factory=list)
+    versions: list[DisputeVersionResponse] = Field(default_factory=list)
+    current_version: int = 1
+    is_overdue: bool = False
+    review_age_hours: Optional[int] = None
+    hospital_responses: list[dict] = Field(default_factory=list)
+    findings: list[dict] = Field(default_factory=list)

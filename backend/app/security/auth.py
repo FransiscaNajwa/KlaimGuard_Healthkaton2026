@@ -6,6 +6,8 @@ import time
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from json import dumps, loads
 
+from app.infrastructure.orm_models import HospitalAccount
+
 
 AUTH_COOKIE_NAME = "klaimguard_session"
 SESSION_TTL_SECONDS = 8 * 60 * 60
@@ -14,27 +16,58 @@ AUTH_SECRET = os.getenv(
 ).encode()
 ADMIN_BPJS_USERNAME = os.getenv("ADMIN_BPJS_USERNAME", "admin.bpjs")
 ADMIN_BPJS_PASSWORD = os.getenv("ADMIN_BPJS_PASSWORD", "admin123!")
-ADMIN_AUDIT_USERNAME = os.getenv("ADMIN_AUDIT_USERNAME", "admin.audit")
-ADMIN_AUDIT_PASSWORD = os.getenv("ADMIN_AUDIT_PASSWORD", "audit123!")
+RS_DEMO_USERNAME = os.getenv("RS_DEMO_USERNAME", "petugas.rs")
+RS_DEMO_PASSWORD = os.getenv("RS_DEMO_PASSWORD", "rsdemo123!")
+RS_DEMO_FACILITY_CODE = os.getenv("RS_DEMO_FACILITY_CODE", "RS-DEMO-001")
 COOKIE_SECURE = os.getenv("KLAIMGUARD_COOKIE_SECURE", "false").lower() == "true"
 
 
-def authenticate_admin(username: str, password: str) -> dict[str, str] | None:
-    accounts = (
-        (ADMIN_BPJS_USERNAME, ADMIN_BPJS_PASSWORD, "admin_bpjs"),
-        (ADMIN_AUDIT_USERNAME, ADMIN_AUDIT_PASSWORD, "admin_audit"),
-    )
-    for account_username, account_password, role in accounts:
-        username_matches = hmac.compare_digest(username, account_username)
-        password_matches = hmac.compare_digest(password, account_password)
-        if username_matches and password_matches:
-            return {"user_id": account_username, "role": role}
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    iterations = 310_000
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
+    return f"pbkdf2_sha256${iterations}${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password: str, encoded: str) -> bool:
+    try:
+        algorithm, rounds, salt_hex, digest_hex = encoded.split("$", maxsplit=3)
+        if algorithm != "pbkdf2_sha256":
+            return False
+        digest = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), bytes.fromhex(salt_hex), int(rounds)
+        )
+        return hmac.compare_digest(digest.hex(), digest_hex)
+    except (ValueError, TypeError):
+        return False
+
+
+def authenticate_admin(username: str, password: str, db=None) -> dict[str, str] | None:
+    if hmac.compare_digest(username, ADMIN_BPJS_USERNAME) and hmac.compare_digest(password, ADMIN_BPJS_PASSWORD):
+        return {"user_id": ADMIN_BPJS_USERNAME, "role": "admin_bpjs"}
+    if db is not None:
+        hospital_account = db.query(HospitalAccount).filter_by(username=username).first()
+        if (
+            hospital_account
+            and hospital_account.is_active
+            and verify_password(password, hospital_account.password_hash)
+        ):
+            return {
+                "user_id": hospital_account.username,
+                "role": "petugas_klaim_rs",
+                "facility_code": hospital_account.facility.facility_code,
+            }
+    if hmac.compare_digest(username, RS_DEMO_USERNAME) and hmac.compare_digest(password, RS_DEMO_PASSWORD):
+        return {"user_id": RS_DEMO_USERNAME, "role": "petugas_klaim_rs", "facility_code": RS_DEMO_FACILITY_CODE}
     return None
 
 
-def create_session(user_id: str, role: str) -> str:
+def create_session(user_id: str, role: str, facility_code: str | None = None) -> str:
+    session_data = {"user_id": user_id, "role": role, "expires_at": int(time.time()) + SESSION_TTL_SECONDS}
+    if facility_code:
+        session_data["facility_code"] = facility_code
     payload = dumps(
-        {"user_id": user_id, "role": role, "expires_at": int(time.time()) + SESSION_TTL_SECONDS},
+        session_data,
         separators=(",", ":"),
     ).encode()
     encoded_payload = urlsafe_b64encode(payload).decode().rstrip("=")
@@ -62,7 +95,10 @@ def read_session(token: str) -> dict[str, str] | None:
         payload.get("role"), str
     ):
         return None
-    return {"user_id": payload["user_id"], "role": payload["role"]}
+    result = {"user_id": payload["user_id"], "role": payload["role"]}
+    if isinstance(payload.get("facility_code"), str):
+        result["facility_code"] = payload["facility_code"]
+    return result
 
 
 def generate_csrf_token() -> str:

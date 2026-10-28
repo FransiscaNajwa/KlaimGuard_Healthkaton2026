@@ -22,7 +22,7 @@ export function renderPagination(meta, onPageChange, containerId = "paginationCo
     return `${gap}<button class="page-button ${number === page ? "is-current" : ""}" type="button" data-page="${number}" ${number === page ? 'aria-current="page"' : ""}>${number}</button>`;
   }).join("");
 
-  container.innerHTML = `<span class="pagination-info">Menampilkan <strong>${formatNumber(start)}–${formatNumber(end)}</strong> dari <strong>${formatNumber(total)}</strong> klaim</span>
+  container.innerHTML = `<span class="pagination-info">Menampilkan <strong>${formatNumber(start)}–${formatNumber(end)}</strong> dari <strong>${formatNumber(total)}</strong> ${meta.item_label || "klaim"}</span>
     <nav class="pagination-controls" aria-label="Navigasi halaman">
       <button class="page-button" type="button" data-page="${page - 1}" aria-label="Halaman sebelumnya" ${page <= 1 ? "disabled" : ""}>‹</button>
       ${pageButtons}

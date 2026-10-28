@@ -2,7 +2,7 @@ FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app:/app/backend
 
 WORKDIR /app
 
@@ -16,9 +16,15 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-RUN python backend/scripts/init_db.py \
-    && python backend/scripts/train_xgboost.py
+# Build-time: train model & seed data
+RUN python -m backend.scripts.init_db \
+    && python -m backend.scripts.seed_rs_demo \
+    && python -m backend.scripts.train_xgboost
+
+# Entrypoint script for deploy
+COPY start-render.sh /app/start-render.sh
+RUN chmod +x /app/start-render.sh
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/start-render.sh"]

@@ -13,6 +13,7 @@ from app.infrastructure.repositories import ClaimRepository
 from app.interfaces.dependencies import get_db_session
 from app.rag.pdf_loader import BACKEND_DIR
 from app.rag.rag_service import RegulatoryCopilotService
+from app.rag.regulation_metadata import registered_regulations
 from app.rag.vector_store import LocalVectorStore
 from app.security.rbac import UserRole, require_roles
 
@@ -20,7 +21,7 @@ from app.security.rbac import UserRole, require_roles
 router = APIRouter(
     prefix="/api/v1/copilot",
     tags=["Regulatory RAG Copilot"],
-    dependencies=[Depends(require_roles(UserRole.ADMIN_BPJS, UserRole.ADMIN_AUDIT))],
+    dependencies=[Depends(require_roles(UserRole.ADMIN_BPJS))],
 )
 REGULATIONS_DIR = BACKEND_DIR / "regulation_docs"
 VECTOR_INDEX_DIR = BACKEND_DIR / "ml_models" / "vector_index"
@@ -94,11 +95,17 @@ def draft_dispute(
         clinical_narrative=rule.clinical_narrative,
         recommendation=rule.recommendation,
     )
+    active_references = sorted(
+        {
+            f"{item['source_document']}, halaman {item['page_number']}"
+            for item in draft["citations"]
+        }
+    )
     return DraftDisputeResponse(
         claim_id=claim.claim_id,
         dispute_template=draft["formal_letter"],
-        legal_source=rule.legal_source,
-        regulation_ref=rule.regulation_ref,
+        legal_source="Dokumen regulasi aktif" if active_references else "Belum ditemukan",
+        regulation_ref="; ".join(active_references) if active_references else "Perlu verifikasi manual",
         citations=draft["citations"],
     )
 
@@ -116,4 +123,5 @@ def regulations_status() -> dict[str, object]:
         "indexed_chunks": store.chunk_count,
         "available_documents": available_documents,
         "available_document_count": len(available_documents),
+        "regulation_status": registered_regulations(),
     }

@@ -97,6 +97,10 @@ def main() -> int:
                 [sys.executable, "-m", "backend.scripts.init_db"],
             ),
             (
+                "Seed synthetic hospital clarification portal",
+                [sys.executable, "-m", "backend.scripts.seed_rs_demo"],
+            ),
+            (
                 "Train XGBoost risk model",
                 [sys.executable, "-m", "backend.scripts.train_xgboost"],
             ),
